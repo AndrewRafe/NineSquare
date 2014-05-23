@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 /* Author: Andrew Rafe awra057 (z3461633)
- * Version 0.01: Will be the initial bare bones player who will pick the first
- * available move
+ * Version 0.10: A player that plays the current board according to the eval formula:
+ * Eval(s) = 3X2(s) + X1(s) - 3(O2(s) + O1(s)) 
  * DATE: FRI 23 MAY 2014
  */
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,16 @@
 
 #define MAX_MOVE 81
 
+#define TOP_LEFT 1
+#define TOP_MIDDLE 2
+#define TOP_RIGHT 3
+#define MIDDLE_LEFT 4
+#define MIDDLE_MIDDLE 5
+#define MIDDLE_RIGHT 6
+#define BOTTOM_LEFT 7
+#define BOTTOM_MIDDLE 8
+#define BOTTOM_RIGHT 9
+
 int board[10][10];
 int move[MAX_MOVE+1];
 int player;
@@ -24,6 +34,9 @@ int m;
 
 //Additional functions not included in agent.h
 void clearBoard();
+int moveEvaluation(int boardNum, int possibleMove, int currPlayer);
+int numOfSingles(int boardNum, int testPlayer, int boardTest[10][10]);
+int numOfDoubles(int boardNum, int currPlayer, int boardTest[10][10]);
 
 void usage( char argv0[] )
 {
@@ -135,25 +148,49 @@ int  agent_next_move( int prev_move ) {
 	move[m] = prev_move;
 	board[move[m-1]][prev_move] = OPPONENT;
 	m++;
-	
-	int moveToMake = 0;
-	int i;
 
+	int i, j;
+	int possibleMoves[10];
+	
+	//Set all of the possibleMoves to -1
+	for (j = 0; j < 10; j++) {
+		possibleMoves[j] = -1;
+	}
+	
+	j = 0;
 	//Will pick the first available move
 	for (i = 1; i < 10; i++) {
 		if (board[move[m-1]][i] == EMPTY) {
-			moveToMake = i;
-			break;
+			possibleMoves[j] = i;
+			j++;
 		}
 	}
 	
+	int bestMove, bestEval;
+	int testMove, testEval;
+	
+	bestMove = possibleMoves[0];
+	bestEval = moveEvaluation(move[m-1], bestMove, PLAYER);
+	testMove = possibleMoves[1];
+	j = 2;
+	
+	while (testMove != -1) {
+		testEval = moveEvaluation(move[m-1], testMove, PLAYER);
+		if (testEval > bestEval) {
+			bestEval = testEval;
+			bestMove = testMove;
+		}
+		testMove = possibleMoves[j];
+		j++;
+	}
+	
 	//Add the move to the board under the player move
-	move[m] = moveToMake;
-	board[move[m-1]][moveToMake] = PLAYER;
+	move[m] = bestMove;
+	board[move[m-1]][bestMove] = PLAYER;
 	m++;
 	
-	printf("Making move: %d\n", moveToMake);
-	return moveToMake;
+	printf("Making move: %d\n", bestMove);
+	return bestMove;
 }
 
 void agent_last_move( int prev_move ) {
@@ -182,3 +219,121 @@ void clearBoard() {
 		}
 	}
 } 
+
+int moveEvaluation(int boardNum, int possibleMove, int currPlayer) {
+	int moveScore;
+	int boardTest[10][10];
+	int i, j;
+	for (i = 1; i < 10; i++) {
+		for (j = 1; j < 10; j++) {
+			boardTest[i][j] = board[i][j];
+		}
+	}
+	boardTest[boardNum][possibleMove] = currPlayer;
+	
+	moveScore = ( 3*numOfDoubles(boardNum, PLAYER, boardTest) + numOfSingles(boardNum, PLAYER, boardTest) -
+					3*(numOfDoubles(boardNum, OPPONENT, boardTest) + numOfSingles(boardNum, OPPONENT, boardTest)));
+	
+	printf("Move %d evaluated to %d\n", possibleMove, moveScore);
+	return moveScore;
+}
+
+
+int numOfSingles(int boardNum, int testPlayer, int boardTest[10][10]) {
+	
+	int singles = 0;
+
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][TOP_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][TOP_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][TOP_RIGHT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][BOTTOM_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][BOTTOM_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][BOTTOM_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == EMPTY) ||
+			(boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] == EMPTY) ||
+			(boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		singles++;
+	}
+	if ((boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == testPlayer)) {
+		singles++;
+	}
+	return singles;
+}
+
+
+
+// A method to return the number of doubles on a particular one of the nine boards for
+// a given fake board
+int numOfDoubles(int boardNum, int testPlayer, int boardTest[10][10]) {
+	
+	int doubles = 0;
+	//If two of the board positions in the rows, columns or diagonals belong to the current testPlayer and the third position does not belong to the opponent
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][TOP_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][TOP_RIGHT] == testPlayer) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][TOP_RIGHT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer) ||
+			(boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][BOTTOM_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][BOTTOM_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer) ||
+			(boardTest[boardNum][BOTTOM_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_LEFT] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == testPlayer) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_LEFT] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] ==EMPTY) ||
+			(boardTest[boardNum][TOP_MIDDLE] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer) ||
+			(boardTest[boardNum][TOP_MIDDLE] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_MIDDLE] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_RIGHT] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_RIGHT] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == EMPTY) ||
+			(boardTest[boardNum][TOP_LEFT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer) ||
+			(boardTest[boardNum][TOP_LEFT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_RIGHT] == testPlayer)) {
+		doubles++;
+	}
+	if ((boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == EMPTY) ||
+			(boardTest[boardNum][TOP_RIGHT] == testPlayer && boardTest[boardNum][MIDDLE_MIDDLE] == EMPTY && boardTest[boardNum][BOTTOM_LEFT] == testPlayer) ||
+			(boardTest[boardNum][TOP_RIGHT] == EMPTY && boardTest[boardNum][MIDDLE_MIDDLE] == testPlayer && boardTest[boardNum][BOTTOM_LEFT] == testPlayer)) {
+		doubles++;
+	}
+	
+	return doubles;
+}
