@@ -1,7 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 /* Author: Andrew Rafe awra057 (z3461633)
- * Version 0.10: A player that plays the current board according to the eval formula:
- * Eval(s) = 3X2(s) + X1(s) - 3(O2(s) + O1(s)) 
+ * Version 0.11: A player that plays the current board according to the eval formula:
+ * Eval(s) = 3X2(s) + X1(s) - 3(O2(s) + O1(s)) - (10O2(s1) + 3O1(s1))
+ * This takes into account the board that will be played next by the opponent
+ * where it is very bad if they already have a double and slightly bad if they have a
+ * single.
  * DATE: FRI 23 MAY 2014
  */
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -232,7 +235,8 @@ int moveEvaluation(int boardNum, int possibleMove, int currPlayer) {
 	boardTest[boardNum][possibleMove] = currPlayer;
 	
 	moveScore = ( 3*numOfDoubles(boardNum, PLAYER, boardTest) + numOfSingles(boardNum, PLAYER, boardTest) -
-					3*(numOfDoubles(boardNum, OPPONENT, boardTest) + numOfSingles(boardNum, OPPONENT, boardTest)));
+					3*(numOfDoubles(boardNum, OPPONENT, boardTest) + numOfSingles(boardNum, OPPONENT, boardTest)) -
+					(10*numOfDoubles(possibleMove, OPPONENT, boardTest) + 2*numOfSingles(possibleMove, OPPONENT, boardTest)));
 	
 	printf("Move %d evaluated to %d\n", possibleMove, moveScore);
 	return moveScore;
