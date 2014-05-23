@@ -8,6 +8,9 @@
 #define FALSE          0
 #define TRUE           1
 
+// for use in the board representation
+#define OPPONENT       0
+#define PLAYER         1
 #define EMPTY          2
 
 // game status or result
